@@ -33,6 +33,7 @@ class HashTableChaining:
         self.ARR_LENGTH = length
         self.LOAD_FACTOR = lf
         self.MEM_SIZE = SIZE_EMPTY_HASH_TABLE
+        self.TOTAL_INSERTIONS = 0
         self.table = [None] * self.ARR_LENGTH
         self.set_table_with_load_factor(self.LOAD_FACTOR)
 
@@ -55,7 +56,7 @@ class HashTableChaining:
                     break
                 cur = cur.next
             cur.next = ListNode(key)
-        # self.MEM_SIZE += SIZE_LIST_NODE
+        self.TOTAL_INSERTIONS += 1
 
     def lookup(self, key: str):
         """
@@ -97,6 +98,7 @@ class HashTableChaining:
         filled = round(lf * self.ARR_LENGTH)
         for i in range(filled):
             self.table[i] = ListNode(gen_random_string(8))
+            self.TOTAL_INSERTIONS += 1
 
     def get_random_val(self):
         options = []
@@ -154,9 +156,10 @@ class HashTableAddressing:
         """
         self.ARR_LENGTH = length
         self.LOAD_FACTOR = lf
+        self.MEM_SIZE = 48
+        self.TOTAL_INSERTIONS = 0
         self.table = [None] * self.ARR_LENGTH
         self.set_table_with_load_factor(self.LOAD_FACTOR)
-        self.MEM_SIZE = 48
 
     def get_index(self, key: str):
         return hash(key) % self.ARR_LENGTH
@@ -192,6 +195,7 @@ class HashTableAddressing:
                 if collisions == self.ARR_LENGTH:
                     self.double_table()
         self.table[index] = key
+        self.TOTAL_INSERTIONS += 1
 
     def double_table(self):
         new_length = self.ARR_LENGTH * 2;
@@ -245,6 +249,7 @@ class HashTableAddressing:
         filled = round(lf * self.ARR_LENGTH)
         for i in range(filled):
             self.table[i] = gen_random_string(8)
+            self.TOTAL_INSERTIONS += 1
 
     def get_random_val(self):
         while True:
@@ -275,6 +280,7 @@ class HashTableAddressing:
                 self.MEM_SIZE += SIZE_ARR_STR
         return self.MEM_SIZE
 
+
 def main():
 
     # build argument parser
@@ -297,18 +303,19 @@ def main():
             for lf in load_factors:
                 hash_tables.append(HashTableAddressing(ts, lf))
 
-    mem_test(hash_tables)
-    print()
-    return
     insertion_test(hash_tables)
     print()
     search_test(hash_tables)
+    print()
+    mem_test(hash_tables)
+    print()
+    return
 
 
 def insertion_test(hash_tables):
     print('{:^70}'.format('INSERTION'))
     table_div()
-    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('NUM_INSERTIONS') + 'TIME')
+    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('NUM_INSERTIONS') + '{:17}'.format('TOTAL_INSERTIONS') + 'TIME')
     table_div()
     for ht in hash_tables:
         start_insert_time = time.time()
@@ -318,9 +325,11 @@ def insertion_test(hash_tables):
             ht.insert(gen_random_string(8))
         end_insert_time = time.time()
         insert_time = end_insert_time - start_insert_time
+
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
               '{:<17}'.format(num_insertions) +
+              '{:<17}'.format(ht.TOTAL_INSERTIONS) +
               '{:<20}'.format(insert_time))
     table_div()
 
