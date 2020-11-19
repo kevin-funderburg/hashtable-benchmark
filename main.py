@@ -7,10 +7,13 @@ import string
 import time
 import sys
 
-ht = None
+# ht = None
 
 SIZE_STR = 49
 SIZE_LIST_NODE = 1064
+SIZE_EMPTY_HASH_TABLE = 48
+SIZE_ARR_NONE = 8
+SIZE_ARR_STR = 8
 
 
 class ListNode:
@@ -29,6 +32,7 @@ class HashTableChaining:
         """
         self.ARR_LENGTH = length
         self.LOAD_FACTOR = lf
+        self.MEM_SIZE = SIZE_EMPTY_HASH_TABLE
         self.table = [None] * self.ARR_LENGTH
         self.set_table_with_load_factor(self.LOAD_FACTOR)
 
@@ -51,6 +55,7 @@ class HashTableChaining:
                     break
                 cur = cur.next
             cur.next = ListNode(key)
+        # self.MEM_SIZE += SIZE_LIST_NODE
 
     def lookup(self, key: str):
         """
@@ -94,11 +99,15 @@ class HashTableChaining:
             self.table[i] = ListNode(gen_random_string(8))
 
     def get_random_val(self):
-        found = False
-        while not found:
+        options = []
+        while True:
             index = random.choice(self.table)
             if index:
-                return index.val
+                cur = index
+                while cur is not None:
+                    options.append(cur.val)
+                    cur = cur.next
+                return random.choice(options)
 
     def print_table(self):
         """
@@ -118,15 +127,53 @@ class HashTableChaining:
                 print()
             x += 1
 
+    def get_mem_size(self):
+        """
+        calculate the total size of the hash table in bytes
+        :return: MEM_SIZE
+        """
+        for index in self.table:
+            if index is None:
+                self.MEM_SIZE += SIZE_ARR_NONE
+            else:
+                cur = index
+                while cur is not None:
+                    self.MEM_SIZE += SIZE_LIST_NODE
+                    cur = cur.next
+        return self.MEM_SIZE
+
+
 
 class HashTableAddressing:
 
-    def __init__(self):
-        self.ARR_LENGTH = 997
+    def __init__(self, length, lf):
+        """
+        initialize a hash table
+        :param length: number of indices in the table
+        :param lf: load factor, value between 0 and 1
+        """
+        self.ARR_LENGTH = length
+        self.LOAD_FACTOR = lf
         self.table = [None] * self.ARR_LENGTH
+        self.set_table_with_load_factor(self.LOAD_FACTOR)
+        self.MEM_SIZE = 48
 
     def get_index(self, key: str):
         return hash(key) % self.ARR_LENGTH
+
+    def quadratic_probe(self, key):
+        collisions = 0
+        stop = False
+        slot = hash(key) % self.ARR_LENGTH
+        while not stop:
+            if self.table[slot] is None:
+                # self.table[slot] = string
+                stop = True
+            else:
+                slot = (slot + (collisions ** 2)) % self.ARR_LENGTH
+                collisions += 1
+            # print('collisions: ', collisions)
+        return slot
 
     def insert(self, key: str):
         """
@@ -134,16 +181,25 @@ class HashTableAddressing:
         :type key: str
         :rtype: void
         """
-        index = self.get_index(key)
-        if self.table[index] is None:
-            self.table[index] = ListNode(key)
-        else:
-            cur = self.table[index]
-            while True:
-                if cur.next is None:
-                    break
-                cur = cur.next
-            cur.next = ListNode(key)
+        index = self.lookup(key)
+        if index == -1:
+            collisions = 0
+            index = self.get_index(key)
+            while self.table[index] is not None:
+                index = (index + (collisions ** 2)) % self.ARR_LENGTH
+                collisions += 1
+                # print('collisions: ', collisions)
+                if collisions == self.ARR_LENGTH:
+                    self.double_table()
+        self.table[index] = key
+
+    def double_table(self):
+        new_length = self.ARR_LENGTH * 2;
+        new_table = [None] * new_length
+        for i in range(self.ARR_LENGTH):
+            new_table[i] = self.table[i]
+        self.ARR_LENGTH = new_length
+        self.table = new_table
 
     def lookup(self, key: str):
         """
@@ -151,13 +207,17 @@ class HashTableAddressing:
         :type key: int
         :rtype: int
         """
-        index = self.get_index(key)
-        cur = self.table[index]
-        while cur:
-            if cur.val == key:
+        collisions = 0
+        index = hash(key) % self.ARR_LENGTH
+
+        while self.table[index] is not None:
+            if self.table[index] == key:
                 return index
-            else:
-                cur = cur.next
+            index = (index + (collisions ** 2)) % self.ARR_LENGTH
+            collisions += 1
+            # print('collisions: ', collisions)
+            if collisions == self.ARR_LENGTH:
+                self.double_table()
         return -1
 
     def remove(self, key: str):
@@ -181,6 +241,39 @@ class HashTableAddressing:
                 else:
                     cur, prev = cur.next, prev.next
 
+    def set_table_with_load_factor(self, lf):
+        filled = round(lf * self.ARR_LENGTH)
+        for i in range(filled):
+            self.table[i] = gen_random_string(8)
+
+    def get_random_val(self):
+        while True:
+            index = random.choice(self.table)
+            if index:
+                return index
+
+    def print_table(self):
+        """
+        print the values of the hash table indices
+        :return: void
+        """
+        x = 0
+        for i in self.table:
+            if i:
+                print("[" + str(x) + "]: " + i)
+            x += 1
+
+    def get_mem_size(self):
+        """
+        calculate the total size of the hash table in bytes
+        :return: MEM_SIZE
+        """
+        for index in self.table:
+            if index is None:
+                self.MEM_SIZE += SIZE_ARR_NONE
+            else:
+                self.MEM_SIZE += SIZE_ARR_STR
+        return self.MEM_SIZE
 
 def main():
 
@@ -200,21 +293,16 @@ def main():
             for lf in load_factors:
                 hash_tables.append(HashTableChaining(ts, lf))
     elif args.open_addressing:
-        ht = HashTableAddressing()
+        for ts in table_sizes:
+            for lf in load_factors:
+                hash_tables.append(HashTableAddressing(ts, lf))
 
-    insertion_test(hash_tables)
-    search_test(hash_tables)
+    mem_test(hash_tables)
+    print()
     return
-    # for i in range():
-    #     ht.insert(gen_random_string(8))
-    # # print(ht.lookup(str))
-    # print("--- %s seconds ---" % (time.time() - start_time))
-    # ht.print_table()
-    # s = sys.getsizeof(HashTableChaining)
-    # print('ht size: ' + str(s))
-    # ls = sys.getsizeof(ListNode)
-    # print('ListNode size: ' + str(ls))
-    # print('sizeof 8 str: ' + str(sys.getsizeof('')))
+    insertion_test(hash_tables)
+    print()
+    search_test(hash_tables)
 
 
 def insertion_test(hash_tables):
@@ -224,15 +312,16 @@ def insertion_test(hash_tables):
     table_div()
     for ht in hash_tables:
         start_insert_time = time.time()
-        num_insertions = round(ht.ARR_LENGTH*0.5)
+        num_insertions = round(ht.ARR_LENGTH*0.75)
         # num_insertions = 1
         for i in range(num_insertions):
             ht.insert(gen_random_string(8))
         end_insert_time = time.time()
+        insert_time = end_insert_time - start_insert_time
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
               '{:<17}'.format(num_insertions) +
-              '{:<20}'.format(end_insert_time - start_insert_time))
+              '{:<20}'.format(insert_time))
     table_div()
 
 
@@ -246,15 +335,54 @@ def search_test(hash_tables):
         start_search_time = time.time()
         ht.lookup(search_string)
         end_search_time = time.time()
+        search_time = end_search_time - start_search_time
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
               '{:<17}'.format(search_string) +
-              '{:<20}'.format(end_search_time - start_search_time))
+              '{:<20}'.format(search_time))
     table_div()
 
 
-def table_div():
-    print('{:-^70}'.format(''))
+def mem_test(hash_tables):
+    print('{:^70}'.format('MEMORY'))
+    table_div()
+    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('MEMORY'))
+    table_div()
+    for ht in hash_tables:
+        print('{:<10}'.format(ht.ARR_LENGTH) +
+              '{:<8}'.format(ht.LOAD_FACTOR) +
+              '{:<17}'.format(ht.get_mem_size()) +
+              '{:<20}'.format(""))
+    table_div()
+
+
+def table_div(): print('{:-^70}'.format(''))
+
+
+
+def size_test():
+    ht = HashTableAddressing(100, 0)
+    print("HashTableAddressing(100, 0): ", sys.getsizeof(ht))
+    ht1 = HashTableAddressing(100, 0.5)
+    print("HashTableAddressing(100, 0.5): ", sys.getsizeof(ht1))
+    ht2 = HashTableAddressing(100, 0.75)
+    print("HashTableAddressing(100, 0.75): ", sys.getsizeof(ht2))
+    ht = HashTableChaining(100, 0)
+    print("HashTableChaining(100, 0): ", sys.getsizeof(ht))
+    print("ht.MEM_SIZE:", ht.MEM_SIZE)
+    ht1 = HashTableChaining(100, 0.5)
+    print("ht1.MEM_SIZE:", ht1.MEM_SIZE)
+    print("HashTableChaining(100, 0.5): ", sys.getsizeof(ht1))
+    ht2 = HashTableChaining(100, 0.75)
+    print("HashTableChaining(100, 0.75): ", sys.getsizeof(ht2))
+    arr = []
+    print("size of arr: ", sys.getsizeof(arr))
+    arr = [None]
+    print("size of arr: ", sys.getsizeof(arr))
+    l = ListNode
+    print("size of empty ListNode: ", sys.getsizeof(l))
+    l.val = 'andslajd'
+    print("size of ListNode with string: ", sys.getsizeof(l))
 
 
 def graph_test():
@@ -273,15 +401,8 @@ def gen_random_string(length):
     return result_str
 
 
-def get_prime_nums():
-    file = open('tablesizes.txt')
-    lines = file.readlines()
-    for line in lines:
-        print(format(line.strip()))
-
-
 if __name__ == '__main__':
     # graph_test()
     # gen_random_string(8)
-    # get_prime_nums()
+    # size_test()
     main()
