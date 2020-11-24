@@ -290,9 +290,8 @@ def main():
     args = parser.parse_args()
 
     hash_tables = []
-    table_sizes = [100, 1000, 10000, 100000]
-    load_factors = [0, 0.25, 0.5, 0.75]
-    start_time = time.time()
+    table_sizes = [100, 1000, 10000, 100000, 1000000]
+    load_factors = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
     if args.chaining:
         for ts in table_sizes:
@@ -313,24 +312,39 @@ def main():
 
 
 def insertion_test(hash_tables):
-    print('{:^70}'.format('INSERTION'))
+    print('{:^100}'.format('INSERTION'))
     table_div()
-    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('NUM_INSERTIONS') + '{:17}'.format('TOTAL_INSERTIONS') + 'TIME')
+    print('{:10}'.format('LENGTH') +
+          '{:8}'.format('LF') +
+          '{:20}'.format('START_INSERTIONS') +
+          # '{:17}'.format('NEW_INSERTIONS') +
+          '{:20}'.format('TOTAL_INSERTIONS') +
+          'TIME')
     table_div()
     for ht in hash_tables:
-        start_insert_time = time.time()
-        num_insertions = round(ht.ARR_LENGTH*0.75)
-        # num_insertions = 1
-        for i in range(num_insertions):
+        start_insertions = ht.TOTAL_INSERTIONS
+        # num_insertions = round(ht.ARR_LENGTH*0.75)
+        # TODO insert key, take time, remove key that was inserted and repeat multiple times and take the average
+        insert_times = []
+        for i in range(10):
+            start_insert_time = time.time()
             ht.insert(gen_random_string(8))
-        end_insert_time = time.time()
-        insert_time = end_insert_time - start_insert_time
+            end_insert_time = time.time()
+            insert_time = end_insert_time - start_insert_time
+            insert_times.append(insert_time)
+
+        avg_insert_time = sum(insert_times) / len(insert_times)
+        # num_insertions = 1
+        # for i in range(num_insertions):
+        #     ht.insert(gen_random_string(8))
+
 
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
-              '{:<17}'.format(num_insertions) +
-              '{:<17}'.format(ht.TOTAL_INSERTIONS) +
-              '{:<20}'.format(insert_time))
+              '{:<20}'.format(start_insertions) +
+              # '{:<17}'.format(num_insertions) +
+              '{:<20}'.format(ht.TOTAL_INSERTIONS) +
+              '{:<20}'.format(avg_insert_time))
     table_div()
 
 
@@ -365,8 +379,7 @@ def mem_test(hash_tables):
     table_div()
 
 
-def table_div(): print('{:-^70}'.format(''))
-
+def table_div(): print('{:-^100}'.format(''))
 
 
 def size_test():
