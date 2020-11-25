@@ -7,7 +7,6 @@ import string
 import time
 import sys
 
-# ht = None
 
 SIZE_STR = 49
 SIZE_LIST_NODE = 1064
@@ -93,11 +92,12 @@ class HashTableChaining:
                     break
                 else:
                     cur, prev = cur.next, prev.next
+        self.TOTAL_INSERTIONS -= 1
 
     def set_table_with_load_factor(self, lf):
         filled = round(lf * self.ARR_LENGTH)
         for i in range(filled):
-            self.table[i] = ListNode(gen_random_string(8))
+            self.table[i] = ListNode(gen_random_string())
             self.TOTAL_INSERTIONS += 1
 
     def get_random_val(self):
@@ -143,7 +143,6 @@ class HashTableChaining:
                     self.MEM_SIZE += SIZE_LIST_NODE
                     cur = cur.next
         return self.MEM_SIZE
-
 
 
 class HashTableAddressing:
@@ -230,25 +229,24 @@ class HashTableAddressing:
         :type key: int
         :rtype: void
         """
-        index = self.get_index(key)
-        cur = prev = self.table[index]
-        if not cur:
-            return
-        if cur.val == key:
-            self.table[index] = cur.next
-        else:
-            cur = cur.next
-            while cur:
-                if cur.val == key:
-                    prev.next = cur.next
-                    break
-                else:
-                    cur, prev = cur.next, prev.next
+        collisions = 0
+        index = hash(key) % self.ARR_LENGTH
+
+        while self.table[index] is not None:
+            if self.table[index] == key:
+                self.table[index] = None
+                return
+            index = (index + (collisions ** 2)) % self.ARR_LENGTH
+            collisions += 1
+            # print('collisions: ', collisions)
+            if collisions == self.ARR_LENGTH:
+                break
+        self.TOTAL_INSERTIONS -= 1
 
     def set_table_with_load_factor(self, lf):
         filled = round(lf * self.ARR_LENGTH)
         for i in range(filled):
-            self.table[i] = gen_random_string(8)
+            self.table[i] = gen_random_string()
             self.TOTAL_INSERTIONS += 1
 
     def get_random_val(self):
@@ -317,33 +315,26 @@ def insertion_test(hash_tables):
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
           '{:20}'.format('START_INSERTIONS') +
-          # '{:17}'.format('NEW_INSERTIONS') +
-          '{:20}'.format('TOTAL_INSERTIONS') +
           'TIME')
     table_div()
     for ht in hash_tables:
         start_insertions = ht.TOTAL_INSERTIONS
-        # num_insertions = round(ht.ARR_LENGTH*0.75)
         # TODO insert key, take time, remove key that was inserted and repeat multiple times and take the average
         insert_times = []
         for i in range(10):
+            rand_string = gen_random_string()
             start_insert_time = time.time()
-            ht.insert(gen_random_string(8))
+            ht.insert(rand_string)
             end_insert_time = time.time()
             insert_time = end_insert_time - start_insert_time
             insert_times.append(insert_time)
+            ht.remove(rand_string)
 
         avg_insert_time = sum(insert_times) / len(insert_times)
-        # num_insertions = 1
-        # for i in range(num_insertions):
-        #     ht.insert(gen_random_string(8))
-
 
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
               '{:<20}'.format(start_insertions) +
-              # '{:<17}'.format(num_insertions) +
-              '{:<20}'.format(ht.TOTAL_INSERTIONS) +
               '{:<20}'.format(avg_insert_time))
     table_div()
 
@@ -351,18 +342,28 @@ def insertion_test(hash_tables):
 def search_test(hash_tables):
     print('{:^70}'.format('SEARCH'))
     table_div()
-    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('SEARCH') + 'TIME')
+    print('{:10}'.format('LENGTH') +
+          '{:8}'.format('LF') +
+          # '{:17}'.format('SEARCH') +
+          'TIME')
     table_div()
+    search_times = []
     for ht in hash_tables:
-        search_string = ht.get_random_val()
-        start_search_time = time.time()
-        ht.lookup(search_string)
-        end_search_time = time.time()
-        search_time = end_search_time - start_search_time
-        print('{:<10}'.format(ht.ARR_LENGTH) +
-              '{:<8}'.format(ht.LOAD_FACTOR) +
-              '{:<17}'.format(search_string) +
-              '{:<20}'.format(search_time))
+        if ht.LOAD_FACTOR > 0:
+            for i in range(10):
+                    search_string = ht.get_random_val()
+                    start_search_time = time.time()
+                    ht.lookup(search_string)
+                    end_search_time = time.time()
+                    search_times.append(end_search_time - start_search_time)
+
+            avg_search_time = sum(search_times) / len(search_times)
+
+            print('{:<10}'.format(ht.ARR_LENGTH) +
+                  '{:<8}'.format(ht.LOAD_FACTOR) +
+                  # '{:<17}'.format(search_string) +
+                  '{:<20}'.format(avg_search_time))
+
     table_div()
 
 
@@ -417,14 +418,18 @@ def graph_test():
     plt.show()
 
 
-def gen_random_string(length):
+def gen_random_string():
+    """
+    generate a random string of lowercase letters, 8 characters long
+    :return:
+    """
     letters = string.ascii_lowercase
-    result_str = ''.join(random.choice(letters) for i in range(length))
+    result_str = ''.join(random.choice(letters) for i in range(8))
     return result_str
 
 
 if __name__ == '__main__':
     # graph_test()
-    # gen_random_string(8)
+    # gen_random_string()
     # size_test()
     main()
