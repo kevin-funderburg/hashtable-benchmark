@@ -7,12 +7,16 @@ import string
 import time
 import sys
 
+NUM_TESTS = 100
 
-SIZE_STR = 49
-SIZE_LIST_NODE = 1064
-SIZE_EMPTY_HASH_TABLE = 48
-SIZE_ARR_NONE = 8
-SIZE_ARR_STR = 8
+"""
+the following are constants that are used to determine the size of the hash table
+in memory, they were determined by using the sys.getsizeof() call
+"""
+SIZE_LIST_NODE = 1064       # size of ListNode class
+SIZE_EMPTY_HASH_TABLE = 48  # size of hash table with no insertions
+SIZE_ARR_NONE = 8           # size of an array index with a None value
+SIZE_ARR_STR = 8            # size of an array index with a 8 character string
 
 
 class ListNode:
@@ -36,14 +40,25 @@ class HashTableChaining:
         self.table = [None] * self.ARR_LENGTH
         self.set_table_with_load_factor(self.LOAD_FACTOR)
 
+    def set_table_with_load_factor(self, lf):
+        """
+        insert values into the table based on the load factor
+        :param lf:
+        :return: void
+        """
+        filled = round(lf * self.ARR_LENGTH)
+        for i in range(filled):
+            self.table[i] = ListNode(gen_random_string())
+            self.TOTAL_INSERTIONS += 1
+
     def get_index(self, key: str):
         return hash(key) % self.ARR_LENGTH
 
     def insert(self, key: str):
         """
-        value will always be non-negative.
+        insert a string into the table
         :type key: str
-        :rtype: void
+        :return: void
         """
         index = self.get_index(key)
         if self.table[index] is None:
@@ -75,7 +90,7 @@ class HashTableChaining:
     def remove(self, key: str):
         """
         Removes the mapping of the specified value key if this map contains a mapping for the key
-        :type key: int
+        :type key: str
         :rtype: void
         """
         index = self.get_index(key)
@@ -94,13 +109,12 @@ class HashTableChaining:
                     cur, prev = cur.next, prev.next
         self.TOTAL_INSERTIONS -= 1
 
-    def set_table_with_load_factor(self, lf):
-        filled = round(lf * self.ARR_LENGTH)
-        for i in range(filled):
-            self.table[i] = ListNode(gen_random_string())
-            self.TOTAL_INSERTIONS += 1
-
     def get_random_val(self):
+        """
+        returns the value of a random index in the hash table,
+        used for searching/deleting a key
+        :return: str
+        """
         options = []
         while True:
             index = random.choice(self.table)
@@ -132,7 +146,7 @@ class HashTableChaining:
     def get_mem_size(self):
         """
         calculate the total size of the hash table in bytes
-        :return: MEM_SIZE
+        :return: int
         """
         for index in self.table:
             if index is None:
@@ -160,26 +174,26 @@ class HashTableAddressing:
         self.table = [None] * self.ARR_LENGTH
         self.set_table_with_load_factor(self.LOAD_FACTOR)
 
+    def set_table_with_load_factor(self, lf):
+        """
+        insert values into the table based on the load factor
+        :param lf:
+        :return: void
+        """
+        filled = round(lf * self.ARR_LENGTH)
+        for i in range(filled):
+            self.table[i] = gen_random_string()
+            self.TOTAL_INSERTIONS += 1
+
     def get_index(self, key: str):
         return hash(key) % self.ARR_LENGTH
 
-    def quadratic_probe(self, key):
-        collisions = 0
-        stop = False
-        slot = hash(key) % self.ARR_LENGTH
-        while not stop:
-            if self.table[slot] is None:
-                # self.table[slot] = string
-                stop = True
-            else:
-                slot = (slot + (collisions ** 2)) % self.ARR_LENGTH
-                collisions += 1
-            # print('collisions: ', collisions)
-        return slot
+    def quadratic_probe(self, index, collisions):
+        return (index + (collisions ** 2)) % self.ARR_LENGTH
 
     def insert(self, key: str):
         """
-        value will always be non-negative.
+        insert a string into the table
         :type key: str
         :rtype: void
         """
@@ -188,9 +202,8 @@ class HashTableAddressing:
             collisions = 0
             index = self.get_index(key)
             while self.table[index] is not None:
-                index = (index + (collisions ** 2)) % self.ARR_LENGTH
+                index = self.quadratic_probe(index, collisions)
                 collisions += 1
-                # print('collisions: ', collisions)
                 if collisions == self.ARR_LENGTH:
                     self.double_table()
         self.table[index] = key
@@ -216,9 +229,8 @@ class HashTableAddressing:
         while self.table[index] is not None:
             if self.table[index] == key:
                 return index
-            index = (index + (collisions ** 2)) % self.ARR_LENGTH
+            index = self.quadratic_probe(index, collisions)
             collisions += 1
-            # print('collisions: ', collisions)
             if collisions == self.ARR_LENGTH:
                 self.double_table()
         return -1
@@ -236,20 +248,18 @@ class HashTableAddressing:
             if self.table[index] == key:
                 self.table[index] = None
                 return
-            index = (index + (collisions ** 2)) % self.ARR_LENGTH
+            index = self.quadratic_probe(index, collisions)
             collisions += 1
-            # print('collisions: ', collisions)
             if collisions == self.ARR_LENGTH:
                 break
         self.TOTAL_INSERTIONS -= 1
 
-    def set_table_with_load_factor(self, lf):
-        filled = round(lf * self.ARR_LENGTH)
-        for i in range(filled):
-            self.table[i] = gen_random_string()
-            self.TOTAL_INSERTIONS += 1
-
     def get_random_val(self):
+        """
+        returns the value of a random index in the hash table,
+        used for searching/deleting a key
+        :return: str
+        """
         while True:
             index = random.choice(self.table)
             if index:
@@ -288,7 +298,9 @@ def main():
     args = parser.parse_args()
 
     hash_tables = []
+    # table_sizes = [100, 1000, 10000]
     table_sizes = [100, 1000, 10000, 100000, 1000000]
+    # table_sizes = [100, 1000, 10000, 100000, 1000000, 10000000]
     load_factors = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
     if args.chaining:
@@ -304,24 +316,26 @@ def main():
     print()
     search_test(hash_tables)
     print()
+    deletion_test(hash_tables)
+    print()
     mem_test(hash_tables)
     print()
     return
 
 
 def insertion_test(hash_tables):
-    print('{:^100}'.format('INSERTION'))
+    print('{:^60}'.format('INSERTION'))
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
           '{:20}'.format('START_INSERTIONS') +
           'TIME')
     table_div()
+
     for ht in hash_tables:
         start_insertions = ht.TOTAL_INSERTIONS
-        # TODO insert key, take time, remove key that was inserted and repeat multiple times and take the average
         insert_times = []
-        for i in range(10):
+        for i in range(NUM_TESTS):
             rand_string = gen_random_string()
             start_insert_time = time.time()
             ht.insert(rand_string)
@@ -330,7 +344,7 @@ def insertion_test(hash_tables):
             insert_times.append(insert_time)
             ht.remove(rand_string)
 
-        avg_insert_time = sum(insert_times) / len(insert_times)
+        avg_insert_time = avg(insert_times)
 
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
@@ -340,38 +354,63 @@ def insertion_test(hash_tables):
 
 
 def search_test(hash_tables):
-    print('{:^70}'.format('SEARCH'))
+    print('{:^60}'.format('SEARCH'))
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
-          # '{:17}'.format('SEARCH') +
           'TIME')
     table_div()
-    search_times = []
+
     for ht in hash_tables:
         if ht.LOAD_FACTOR > 0:
-            for i in range(10):
-                    search_string = ht.get_random_val()
-                    start_search_time = time.time()
-                    ht.lookup(search_string)
-                    end_search_time = time.time()
-                    search_times.append(end_search_time - start_search_time)
+            search_times = []
+            for i in range(NUM_TESTS):
+                search_string = ht.get_random_val()
+                start_search_time = time.time()
+                ht.lookup(search_string)
+                end_search_time = time.time()
+                search_times.append(end_search_time - start_search_time)
 
-            avg_search_time = sum(search_times) / len(search_times)
+            avg_search_time = avg(search_times)
 
             print('{:<10}'.format(ht.ARR_LENGTH) +
                   '{:<8}'.format(ht.LOAD_FACTOR) +
-                  # '{:<17}'.format(search_string) +
                   '{:<20}'.format(avg_search_time))
+    table_div()
 
+
+def deletion_test(hash_tables):
+    print('{:^60}'.format('DELETE'))
+    table_div()
+    print('{:10}'.format('LENGTH') +
+          '{:8}'.format('LF') +
+          'TIME')
+    table_div()
+
+    for ht in hash_tables:
+        if ht.LOAD_FACTOR > 0:
+            delete_times = []
+            for i in range(NUM_TESTS):
+                delete_string = ht.get_random_val()
+                start_delete_time = time.time()
+                ht.remove(delete_string)
+                end_delete_time = time.time()
+                delete_times.append(start_delete_time - end_delete_time)
+
+            avg_delete_time = avg(delete_times)
+
+            print('{:<10}'.format(ht.ARR_LENGTH) +
+                  '{:<8}'.format(ht.LOAD_FACTOR) +
+                  '{:<20}'.format(avg_delete_time))
     table_div()
 
 
 def mem_test(hash_tables):
-    print('{:^70}'.format('MEMORY'))
+    print('{:^60}'.format('MEMORY'))
     table_div()
     print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('MEMORY'))
     table_div()
+
     for ht in hash_tables:
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
@@ -380,14 +419,17 @@ def mem_test(hash_tables):
     table_div()
 
 
-def table_div(): print('{:-^100}'.format(''))
+def table_div(): print('{:-^60}'.format(''))
+
+
+def avg(arr): return sum(arr) / len(arr)
 
 
 def size_test():
-    ht = HashTableAddressing(100, 0)
-    print("HashTableAddressing(100, 0): ", sys.getsizeof(ht))
-    ht1 = HashTableAddressing(100, 0.5)
-    print("HashTableAddressing(100, 0.5): ", sys.getsizeof(ht1))
+    ht = HashTableAddressing(100, 0.5)
+    print("HashTableAddressing(100, 0.5): ", sys.getsizeof(ht))
+    ht1 = HashTableAddressing(1000000, 0.5)
+    print("HashTableAddressing(1000000, 0.5): ", sys.getsizeof(ht1))
     ht2 = HashTableAddressing(100, 0.75)
     print("HashTableAddressing(100, 0.75): ", sys.getsizeof(ht2))
     ht = HashTableChaining(100, 0)
