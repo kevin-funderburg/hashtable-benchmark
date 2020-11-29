@@ -457,7 +457,6 @@ def search_test(hash_tables):
 
     for ht in hash_tables:
         if not ht.is_empty():
-        # if ht.LOAD_FACTOR > 0:
             graph_data = None
             try:
                 tmp = search_time_by_load_factor[ht.ARR_LENGTH]
@@ -640,7 +639,7 @@ def mem_test(hash_tables):
             mem_size_by_load_factor[g.sizes[i]].append(g.mem_sizes[i]/1000000)
 
     fig, ax = plt.subplots()
-    width = 0.35
+
     # multiple line plot
     leg = []
     for key in mem_size_by_load_factor:
