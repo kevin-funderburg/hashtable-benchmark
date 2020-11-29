@@ -7,6 +7,7 @@ import string
 import time
 import sys
 
+OUTPUT = 'output.txt'
 NUM_TESTS = 100
 
 """
@@ -17,6 +18,24 @@ SIZE_LIST_NODE = 1064       # size of ListNode class
 SIZE_EMPTY_HASH_TABLE = 48  # size of hash table with no insertions
 SIZE_ARR_NONE = 8           # size of an array index with a None value
 SIZE_ARR_STR = 8            # size of an array index with a 8 character string
+
+# TABLE_SIZES = [10, 20]
+TABLE_SIZES = [100, 1000, 10000]
+# TABLE_SIZES = [100, 1000, 10000, 100000, 1000000]
+# TABLE_SIZES = [100, 1000, 10000, 100000, 1000000, 10000000]
+# LOAD_FACTORS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+LOAD_FACTORS = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80,
+                0.85, 0.90, 0.95]
+
+out = open(OUTPUT, 'w')
+
+class GraphData:
+    def __init__(self, lf):
+        self.lf = lf
+        self.sizes = []
+        self.avg_times = []
+        self.mem_sizes = []
+        self.size_time_plots = []
 
 
 class ListNode:
@@ -188,8 +207,8 @@ class HashTableAddressing:
     def get_index(self, key: str):
         return hash(key) % self.ARR_LENGTH
 
-    def quadratic_probe(self, index, collisions):
-        return (index + (collisions ** 2)) % self.ARR_LENGTH
+    def quadratic_probe(self, key, collisions):
+        return (hash(key) + collisions + 3*(collisions**2)) % self.ARR_LENGTH
 
     def insert(self, key: str):
         """
@@ -200,12 +219,12 @@ class HashTableAddressing:
         index = self.lookup(key)
         if index == -1:
             collisions = 0
-            index = self.get_index(key)
-            while self.table[index] is not None:
-                index = self.quadratic_probe(index, collisions)
+            start = index = self.quadratic_probe(key, collisions)
+            while self.table[index]:
                 collisions += 1
-                if collisions == self.ARR_LENGTH:
-                    self.double_table()
+                index = self.quadratic_probe(key, collisions)
+                if start == index: break
+
         self.table[index] = key
         self.TOTAL_INSERTIONS += 1
 
@@ -224,15 +243,15 @@ class HashTableAddressing:
         :rtype: int
         """
         collisions = 0
-        index = hash(key) % self.ARR_LENGTH
+        start = index = self.quadratic_probe(key, collisions)
 
-        while self.table[index] is not None:
+        while self.table[index]:
             if self.table[index] == key:
                 return index
-            index = self.quadratic_probe(index, collisions)
             collisions += 1
-            if collisions == self.ARR_LENGTH:
-                self.double_table()
+            index = self.quadratic_probe(key, collisions)
+            if start == index: break
+
         return -1
 
     def remove(self, key: str):
@@ -241,18 +260,10 @@ class HashTableAddressing:
         :type key: int
         :rtype: void
         """
-        collisions = 0
-        index = hash(key) % self.ARR_LENGTH
-
-        while self.table[index] is not None:
-            if self.table[index] == key:
-                self.table[index] = None
-                return
-            index = self.quadratic_probe(index, collisions)
-            collisions += 1
-            if collisions == self.ARR_LENGTH:
-                break
-        self.TOTAL_INSERTIONS -= 1
+        index = self.lookup(key)
+        if index != -1:
+            self.table[index] = None
+            self.TOTAL_INSERTIONS -= 1
 
     def get_random_val(self):
         """
@@ -262,8 +273,7 @@ class HashTableAddressing:
         """
         while True:
             index = random.choice(self.table)
-            if index:
-                return index
+            if index: return index
 
     def print_table(self):
         """
@@ -272,8 +282,7 @@ class HashTableAddressing:
         """
         x = 0
         for i in self.table:
-            if i:
-                print("[" + str(x) + "]: " + i)
+            if i: print("[" + str(x) + "]: " + i)
             x += 1
 
     def get_mem_size(self):
@@ -295,46 +304,73 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', dest='chaining', action='store_true')
     parser.add_argument('-o', dest='open_addressing', action='store_true')
+    parser.add_argument('-b', dest='both', action='store_true')
     args = parser.parse_args()
 
-    hash_tables = []
-    # table_sizes = [100, 1000, 10000]
-    table_sizes = [100, 1000, 10000, 100000, 1000000]
-    # table_sizes = [100, 1000, 10000, 100000, 1000000, 10000000]
-    load_factors = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    if args.chaining or args.open_addressing:
+        hash_tables = []
+        for ts in TABLE_SIZES:
+            for lf in LOAD_FACTORS:
+                if args.chaining:
+                    hash_tables.append(HashTableChaining(ts, lf))
+                elif args.open_addressing:
+                    hash_tables.append(HashTableAddressing(ts, lf))
+        run_tests(hash_tables)
 
-    if args.chaining:
-        for ts in table_sizes:
-            for lf in load_factors:
-                hash_tables.append(HashTableChaining(ts, lf))
-    elif args.open_addressing:
-        for ts in table_sizes:
-            for lf in load_factors:
-                hash_tables.append(HashTableAddressing(ts, lf))
+    elif args.both:
+        hash_tables_chaining = []
+        hash_tables_addressing = []
+        for ts in TABLE_SIZES:
+            for lf in LOAD_FACTORS:
+                hash_tables_chaining.append(HashTableChaining(ts, lf))
+                hash_tables_addressing.append(HashTableAddressing(ts, lf))
+        run_tests(hash_tables_chaining)
+        run_tests(hash_tables_addressing)
 
+    out.close()
+
+def run_tests(hash_tables):
     insertion_test(hash_tables)
-    print()
+    print(file=out)
     search_test(hash_tables)
-    print()
+    print(file=out)
     deletion_test(hash_tables)
-    print()
+    print(file=out)
     mem_test(hash_tables)
-    print()
-    return
+    print(file=out)
 
 
 def insertion_test(hash_tables):
-    print('{:^60}'.format('INSERTION'))
+    all_graph_data = []
+    insertion_time_by_load_factor = {}
+    print('{:^60}'.format('INSERTION (' + get_title(hash_tables) + ')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
           '{:20}'.format('START_INSERTIONS') +
-          'TIME')
+          'TIME', file=out)
     table_div()
-
+    avg_insert_times = []
     for ht in hash_tables:
         start_insertions = ht.TOTAL_INSERTIONS
         insert_times = []
+        graph_data = None
+
+        try:
+            tmp = insertion_time_by_load_factor[ht.ARR_LENGTH]
+        except:
+            insertion_time_by_load_factor.update({ht.ARR_LENGTH: []})
+
+        if len(all_graph_data) == 0:
+            graph_data = GraphData(ht.LOAD_FACTOR)
+        else:
+            for g in all_graph_data:
+                if g.lf == ht.LOAD_FACTOR:
+                    graph_data = g
+                    break
+        if graph_data is None:
+            graph_data = GraphData(ht.LOAD_FACTOR)
+
         for i in range(NUM_TESTS):
             rand_string = gen_random_string()
             start_insert_time = time.time()
@@ -345,24 +381,74 @@ def insertion_test(hash_tables):
             ht.remove(rand_string)
 
         avg_insert_time = avg(insert_times)
+        avg_insert_times.append(avg_insert_time)
+
+        graph_data.sizes.append(ht.ARR_LENGTH)
+        graph_data.avg_times.append(avg_insert_time)
+
+        if len(all_graph_data) < len(LOAD_FACTORS):
+            all_graph_data.append(graph_data)
 
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
               '{:<20}'.format(start_insertions) +
-              '{:<20}'.format(avg_insert_time))
+              '{:<20}'.format(avg_insert_time), file=out)
     table_div()
+
+    # Data for plotting
+    load_factors = []
+
+    for g in all_graph_data:
+        load_factors.append(g.lf)
+        for i in range(len(g.sizes)):
+            insertion_time_by_load_factor[g.sizes[i]].append(g.avg_times[i])
+
+    fig, ax = plt.subplots()
+
+    # multiple line plot
+    leg = []
+    for key in insertion_time_by_load_factor:
+        ax.plot(load_factors, insertion_time_by_load_factor[key])
+        leg.append(key)
+
+    title = get_title(hash_tables)
+
+    ax.set(xlabel='load factor', ylabel='time', title='Insertions')
+    plt.legend(leg, loc='upper left')
+
+    plt.show()
+    fig.savefig("imgs/insertion-" + title.lower() + ".png")
 
 
 def search_test(hash_tables):
-    print('{:^60}'.format('SEARCH'))
+    all_graph_data = []
+    search_time_by_load_factor = {}
+    print('{:^60}'.format('SEARCH (' + get_title(hash_tables) + ')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
-          'TIME')
+          'TIME', file=out)
     table_div()
 
     for ht in hash_tables:
         if ht.LOAD_FACTOR > 0:
+            graph_data = None
+            try:
+                tmp = search_time_by_load_factor[ht.ARR_LENGTH]
+            except:
+                search_time_by_load_factor.update({ht.ARR_LENGTH: []})
+
+            if len(all_graph_data) == 0:
+                graph_data = GraphData(ht.LOAD_FACTOR)
+            else:
+                for g in all_graph_data:
+                    if g.lf == ht.LOAD_FACTOR:
+                        graph_data = g
+                        break
+
+            if graph_data is None:
+                graph_data = GraphData(ht.LOAD_FACTOR)
+
             search_times = []
             for i in range(NUM_TESTS):
                 search_string = ht.get_random_val()
@@ -373,53 +459,189 @@ def search_test(hash_tables):
 
             avg_search_time = avg(search_times)
 
+            graph_data.sizes.append(ht.ARR_LENGTH)
+            graph_data.avg_times.append(avg_search_time)
+            if len(all_graph_data) < len(LOAD_FACTORS)-1:
+                all_graph_data.append(graph_data)
+
             print('{:<10}'.format(ht.ARR_LENGTH) +
                   '{:<8}'.format(ht.LOAD_FACTOR) +
-                  '{:<20}'.format(avg_search_time))
+                  '{:<20}'.format(avg_search_time), file=out)
     table_div()
+
+    # Data for plotting
+    load_factors = []
+
+    for g in all_graph_data:
+        load_factors.append(g.lf)
+        for i in range(len(g.sizes)):
+            search_time_by_load_factor[g.sizes[i]].append(g.avg_times[i])
+
+    fig, ax = plt.subplots()
+
+    # multiple line plot
+    leg = []
+    for key in search_time_by_load_factor:
+        ax.plot(load_factors, search_time_by_load_factor[key])
+        leg.append(key)
+
+    title = get_title(hash_tables)
+
+    ax.set(xlabel='load factor', ylabel='time', title='Search (' + title +')')
+    plt.legend(leg, loc='upper left')
+
+    plt.show()
+    fig.savefig("imgs/search-" + title.lower() + ".png")
 
 
 def deletion_test(hash_tables):
-    print('{:^60}'.format('DELETE'))
+    all_graph_data = []
+    delete_time_by_load_factor = {}
+    print('{:^60}'.format('DELETE (' + get_title(hash_tables) + ')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
-          'TIME')
+          'TIME', file=out)
     table_div()
 
     for ht in hash_tables:
         if ht.LOAD_FACTOR > 0:
+            graph_data = None
+            try:
+                tmp = delete_time_by_load_factor[ht.ARR_LENGTH]
+            except:
+                delete_time_by_load_factor.update({ht.ARR_LENGTH: []})
+
+            if len(all_graph_data) == 0:
+                graph_data = GraphData(ht.LOAD_FACTOR)
+            else:
+                for g in all_graph_data:
+                    if g.lf == ht.LOAD_FACTOR:
+                        graph_data = g
+                        break
+
+            if graph_data is None:
+                graph_data = GraphData(ht.LOAD_FACTOR)
+
             delete_times = []
             for i in range(NUM_TESTS):
                 delete_string = ht.get_random_val()
                 start_delete_time = time.time()
                 ht.remove(delete_string)
                 end_delete_time = time.time()
-                delete_times.append(start_delete_time - end_delete_time)
+                delete_times.append(end_delete_time - start_delete_time)
 
             avg_delete_time = avg(delete_times)
 
+            graph_data.sizes.append(ht.ARR_LENGTH)
+            graph_data.avg_times.append(avg_delete_time)
+            if len(all_graph_data) < len(LOAD_FACTORS) - 1:
+                all_graph_data.append(graph_data)
+
             print('{:<10}'.format(ht.ARR_LENGTH) +
                   '{:<8}'.format(ht.LOAD_FACTOR) +
-                  '{:<20}'.format(avg_delete_time))
+                  '{:<20}'.format(avg_delete_time), file=out)
     table_div()
+
+    # Data for plotting
+    load_factors = []
+
+    for g in all_graph_data:
+        load_factors.append(g.lf)
+        for i in range(len(g.sizes)):
+            delete_time_by_load_factor[g.sizes[i]].append(g.avg_times[i])
+
+    fig, ax = plt.subplots()
+
+    # multiple line plot
+    leg = []
+    for key in delete_time_by_load_factor:
+        ax.plot(load_factors, delete_time_by_load_factor[key])
+        leg.append(key)
+
+    title = get_title(hash_tables)
+
+    ax.set(xlabel='load factor', ylabel='time', title='Delete (' + title + ')')
+    plt.legend(leg, loc='upper left')
+
+    plt.show()
+    fig.savefig("imgs/delete-" + title.lower() + ".png")
 
 
 def mem_test(hash_tables):
-    print('{:^60}'.format('MEMORY'))
+    all_graph_data = []
+    mem_size_by_load_factor = {}
+    print('{:^60}'.format('MEMORY (' + get_title(hash_tables) + ')'), file=out)
     table_div()
-    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('MEMORY'))
+    print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('MEMORY'), file=out)
     table_div()
 
     for ht in hash_tables:
+        graph_data = None
+        try:
+            tmp = mem_size_by_load_factor[ht.ARR_LENGTH]
+        except:
+            mem_size_by_load_factor.update({ht.ARR_LENGTH: []})
+
+        if len(all_graph_data) == 0:
+            graph_data = GraphData(ht.LOAD_FACTOR)
+        else:
+            for g in all_graph_data:
+                if g.lf == ht.LOAD_FACTOR:
+                    graph_data = g
+                    break
+
+        if graph_data is None:
+            graph_data = GraphData(ht.LOAD_FACTOR)
+
+        mem_size = ht.get_mem_size()
+
+        graph_data.sizes.append(ht.ARR_LENGTH)
+        graph_data.mem_sizes.append(mem_size)
+        if len(all_graph_data) < len(LOAD_FACTORS):
+            all_graph_data.append(graph_data)
+
         print('{:<10}'.format(ht.ARR_LENGTH) +
               '{:<8}'.format(ht.LOAD_FACTOR) +
-              '{:<17}'.format(ht.get_mem_size()) +
-              '{:<20}'.format(""))
+              '{:<17}'.format(mem_size) +
+              '{:<20}'.format(""), file=out)
     table_div()
 
+    # Data for plotting
+    load_factors = []
 
-def table_div(): print('{:-^60}'.format(''))
+    for g in all_graph_data:
+        load_factors.append(g.lf)
+        for i in range(len(g.sizes)):
+            mem_size_by_load_factor[g.sizes[i]].append(g.mem_sizes[i]/1000)
+
+    fig, ax = plt.subplots()
+    width = 0.35
+    # multiple line plot
+    leg = []
+    for key in mem_size_by_load_factor:
+        ax.plot(load_factors, mem_size_by_load_factor[key])
+        # ax.bar(load_factors, mem_size_by_load_factor[key], width, label=key)
+
+        leg.append(key)
+
+    title = get_title(hash_tables)
+
+    ax.set(xlabel='load factor', ylabel='Size (Mb)', title='Memory Size (' + title + ')')
+    plt.legend(leg, loc='upper left')
+
+    plt.show()
+    fig.savefig("imgs/memsize-" + title.lower() + ".png")
+
+
+def get_title(hash_tables):
+    if isinstance(hash_tables[0], HashTableChaining):
+        return 'Chaining'
+    else:
+        return 'Open-Addressing'
+
+
+def table_div(): print('{:-^60}'.format(''), file=out)
 
 
 def avg(arr): return sum(arr) / len(arr)
@@ -450,16 +672,6 @@ def size_test():
     print("size of ListNode with string: ", sys.getsizeof(l))
 
 
-def graph_test():
-    x = np.arange(0, math.pi * 2, 0.05)
-    y = np.sin(x)
-    plt.plot(x, y)
-    plt.xlabel("angle")
-    plt.ylabel("sine")
-    plt.title('sine wave')
-    plt.show()
-
-
 def gen_random_string():
     """
     generate a random string of lowercase letters, 8 characters long
@@ -471,7 +683,6 @@ def gen_random_string():
 
 
 if __name__ == '__main__':
-    # graph_test()
     # gen_random_string()
     # size_test()
     main()
