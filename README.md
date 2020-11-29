@@ -1,6 +1,6 @@
 # Hash Tables Benchmarks
 
-The goal of this project was to study the performance of the hash table data structure in terms of time and space efficiency based on the chaining and open addressing algorithms.
+The goal of this project was to study the performance of the hash table data structure in terms of time and space efficiency based on the chaining and open addressing algorithms of collision resolution.
 
 ## About
 
@@ -57,6 +57,16 @@ python3 hash_benchmark.py -c
 
 ## Results
 
+### Chaining
+
+![insertion-chaining](./imgs/insertion-chaining.png)
+![insertion-open-addressing](./imgs/insertion-open-addressing.png)
+![delete-chaining](./imgs/delete-chaining.png)
+![delete-open-addressing](./imgs/delete-open-addressing.png)
+![memsize-chaining](./imgs/memsize-chaining.png)
+![memsize-open-addressing](./imgs/memsize-open-addressing.png)
+![search-chaining](./imgs/search-chaining.png)
+![search-open-addressing](./imgs/search-open-addressing.png)
 
 ## Licensing & thanks
 

@@ -8,7 +8,12 @@ import time
 import sys
 
 OUTPUT = 'output.txt'
-NUM_TESTS = 100
+out = open(OUTPUT, 'w')
+
+NUM_TESTS = 1000
+MAX_TABLE_SIZE = 1000000
+LOAD_FACTORS = []
+TABLE_SIZES = []
 
 """
 the following are constants that are used to determine the size of the hash table
@@ -19,15 +24,6 @@ SIZE_EMPTY_HASH_TABLE = 48  # size of hash table with no insertions
 SIZE_ARR_NONE = 8           # size of an array index with a None value
 SIZE_ARR_STR = 8            # size of an array index with a 8 character string
 
-# TABLE_SIZES = [10, 20]
-TABLE_SIZES = [100, 1000, 10000]
-# TABLE_SIZES = [100, 1000, 10000, 100000, 1000000]
-# TABLE_SIZES = [100, 1000, 10000, 100000, 1000000, 10000000]
-# LOAD_FACTORS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-LOAD_FACTORS = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80,
-                0.85, 0.90, 0.95]
-
-out = open(OUTPUT, 'w')
 
 class GraphData:
     def __init__(self, lf):
@@ -66,6 +62,10 @@ class HashTableChaining:
         :return: void
         """
         filled = round(lf * self.ARR_LENGTH)
+        # this line is added to ensure at least one element is inserted if the load
+        # factor > 0 but the array is so small that the rounding sets filled to 0
+        if lf > 0 and filled == 0:
+            filled = 1
         for i in range(filled):
             self.table[i] = ListNode(gen_random_string())
             self.TOTAL_INSERTIONS += 1
@@ -75,7 +75,7 @@ class HashTableChaining:
 
     def insert(self, key: str):
         """
-        insert a string into the table
+        insert a key to the head of the chain at the index
         :type key: str
         :return: void
         """
@@ -83,12 +83,10 @@ class HashTableChaining:
         if self.table[index] is None:
             self.table[index] = ListNode(key)
         else:
+            new_node = ListNode(key)
             cur = self.table[index]
-            while True:
-                if cur.next is None:
-                    break
-                cur = cur.next
-            cur.next = ListNode(key)
+            new_node.next = cur
+            self.table[index] = new_node
         self.TOTAL_INSERTIONS += 1
 
     def lookup(self, key: str):
@@ -176,6 +174,11 @@ class HashTableChaining:
                     self.MEM_SIZE += SIZE_LIST_NODE
                     cur = cur.next
         return self.MEM_SIZE
+
+    def is_empty(self):
+        for i in self.table:
+            if i: return False
+        return True
 
 
 class HashTableAddressing:
@@ -297,6 +300,25 @@ class HashTableAddressing:
                 self.MEM_SIZE += SIZE_ARR_STR
         return self.MEM_SIZE
 
+    def is_empty(self):
+        for i in self.table:
+            if i: return False
+        return True
+
+
+def init():
+    """
+    initialize constants to be used later
+    :return: void
+    """
+    for lf in np.arange(0.0, 1.0, 0.05):
+        LOAD_FACTORS.append(round(lf, 2))
+
+    x = 100
+    while x <= MAX_TABLE_SIZE:
+        TABLE_SIZES.append(x)
+        x *= 10
+
 
 def main():
 
@@ -306,6 +328,8 @@ def main():
     parser.add_argument('-o', dest='open_addressing', action='store_true')
     parser.add_argument('-b', dest='both', action='store_true')
     args = parser.parse_args()
+
+    init()
 
     if args.chaining or args.open_addressing:
         hash_tables = []
@@ -329,6 +353,7 @@ def main():
 
     out.close()
 
+
 def run_tests(hash_tables):
     insertion_test(hash_tables)
     print(file=out)
@@ -341,9 +366,10 @@ def run_tests(hash_tables):
 
 
 def insertion_test(hash_tables):
+    title = get_title(hash_tables)
     all_graph_data = []
     insertion_time_by_load_factor = {}
-    print('{:^60}'.format('INSERTION (' + get_title(hash_tables) + ')'), file=out)
+    print('{:^60}'.format('INSERTION (' + title +')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
@@ -401,7 +427,7 @@ def insertion_test(hash_tables):
     for g in all_graph_data:
         load_factors.append(g.lf)
         for i in range(len(g.sizes)):
-            insertion_time_by_load_factor[g.sizes[i]].append(g.avg_times[i])
+            insertion_time_by_load_factor[g.sizes[i]].append(g.avg_times[i]/1000000)
 
     fig, ax = plt.subplots()
 
@@ -411,9 +437,7 @@ def insertion_test(hash_tables):
         ax.plot(load_factors, insertion_time_by_load_factor[key])
         leg.append(key)
 
-    title = get_title(hash_tables)
-
-    ax.set(xlabel='load factor', ylabel='time', title='Insertions')
+    ax.set(xlabel='load factor', ylabel='Time (µs)', title='Insertions (' + title +')')
     plt.legend(leg, loc='upper left')
 
     plt.show()
@@ -421,9 +445,10 @@ def insertion_test(hash_tables):
 
 
 def search_test(hash_tables):
+    title = get_title(hash_tables)
     all_graph_data = []
     search_time_by_load_factor = {}
-    print('{:^60}'.format('SEARCH (' + get_title(hash_tables) + ')'), file=out)
+    print('{:^60}'.format('SEARCH (' + title +')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
@@ -431,7 +456,8 @@ def search_test(hash_tables):
     table_div()
 
     for ht in hash_tables:
-        if ht.LOAD_FACTOR > 0:
+        if not ht.is_empty():
+        # if ht.LOAD_FACTOR > 0:
             graph_data = None
             try:
                 tmp = search_time_by_load_factor[ht.ARR_LENGTH]
@@ -475,7 +501,7 @@ def search_test(hash_tables):
     for g in all_graph_data:
         load_factors.append(g.lf)
         for i in range(len(g.sizes)):
-            search_time_by_load_factor[g.sizes[i]].append(g.avg_times[i])
+            search_time_by_load_factor[g.sizes[i]].append(g.avg_times[i]/1000000)
 
     fig, ax = plt.subplots()
 
@@ -485,9 +511,7 @@ def search_test(hash_tables):
         ax.plot(load_factors, search_time_by_load_factor[key])
         leg.append(key)
 
-    title = get_title(hash_tables)
-
-    ax.set(xlabel='load factor', ylabel='time', title='Search (' + title +')')
+    ax.set(xlabel='load factor', ylabel='Time (µs)', title='Search (' + title + ')')
     plt.legend(leg, loc='upper left')
 
     plt.show()
@@ -495,9 +519,10 @@ def search_test(hash_tables):
 
 
 def deletion_test(hash_tables):
+    title = get_title(hash_tables)
     all_graph_data = []
     delete_time_by_load_factor = {}
-    print('{:^60}'.format('DELETE (' + get_title(hash_tables) + ')'), file=out)
+    print('{:^60}'.format('DELETE (' + title + ')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') +
           '{:8}'.format('LF') +
@@ -505,7 +530,7 @@ def deletion_test(hash_tables):
     table_div()
 
     for ht in hash_tables:
-        if ht.LOAD_FACTOR > 0:
+        if not ht.is_empty():
             graph_data = None
             try:
                 tmp = delete_time_by_load_factor[ht.ARR_LENGTH]
@@ -549,7 +574,7 @@ def deletion_test(hash_tables):
     for g in all_graph_data:
         load_factors.append(g.lf)
         for i in range(len(g.sizes)):
-            delete_time_by_load_factor[g.sizes[i]].append(g.avg_times[i])
+            delete_time_by_load_factor[g.sizes[i]].append(g.avg_times[i]/1000000)
 
     fig, ax = plt.subplots()
 
@@ -559,9 +584,7 @@ def deletion_test(hash_tables):
         ax.plot(load_factors, delete_time_by_load_factor[key])
         leg.append(key)
 
-    title = get_title(hash_tables)
-
-    ax.set(xlabel='load factor', ylabel='time', title='Delete (' + title + ')')
+    ax.set(xlabel='load factor', ylabel='Time (µs)', title='Delete (' + title + ')')
     plt.legend(leg, loc='upper left')
 
     plt.show()
@@ -569,9 +592,10 @@ def deletion_test(hash_tables):
 
 
 def mem_test(hash_tables):
+    title = get_title(hash_tables)
     all_graph_data = []
     mem_size_by_load_factor = {}
-    print('{:^60}'.format('MEMORY (' + get_title(hash_tables) + ')'), file=out)
+    print('{:^60}'.format('MEMORY (' + title +')'), file=out)
     table_div()
     print('{:10}'.format('LENGTH') + '{:8}'.format('LF') + '{:17}'.format('MEMORY'), file=out)
     table_div()
@@ -613,7 +637,7 @@ def mem_test(hash_tables):
     for g in all_graph_data:
         load_factors.append(g.lf)
         for i in range(len(g.sizes)):
-            mem_size_by_load_factor[g.sizes[i]].append(g.mem_sizes[i]/1000)
+            mem_size_by_load_factor[g.sizes[i]].append(g.mem_sizes[i]/1000000)
 
     fig, ax = plt.subplots()
     width = 0.35
@@ -627,7 +651,7 @@ def mem_test(hash_tables):
 
     title = get_title(hash_tables)
 
-    ax.set(xlabel='load factor', ylabel='Size (Mb)', title='Memory Size (' + title + ')')
+    ax.set(xlabel='load factor', ylabel='Size (Mb)', title='Memory Size (' + title +')')
     plt.legend(leg, loc='upper left')
 
     plt.show()
@@ -635,10 +659,8 @@ def mem_test(hash_tables):
 
 
 def get_title(hash_tables):
-    if isinstance(hash_tables[0], HashTableChaining):
-        return 'Chaining'
-    else:
-        return 'Open-Addressing'
+    if isinstance(hash_tables[0], HashTableChaining): return 'Chaining'
+    return 'Open-Addressing'
 
 
 def table_div(): print('{:-^60}'.format(''), file=out)
@@ -683,6 +705,4 @@ def gen_random_string():
 
 
 if __name__ == '__main__':
-    # gen_random_string()
-    # size_test()
     main()
