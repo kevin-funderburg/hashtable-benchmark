@@ -20,9 +20,11 @@ The goal of this project was to study the performance of the hash table data str
 
 <!-- /TOC -->
 
-## About
+## Method
 
-The hash table data structure was studied by comparing the effects of collision resolution, namely resolution by chaining and open addressing. In order to accomplish this, I created two classes of hash tables, `HashTableChaining` and `HashTableAddressing`. Each of these classes have similar methods, but vary depending on their method collision resolution; the methods include:
+The project itself was executed in Python, and to perform the tests, two classes of hash tables were created, labeled `HashTableChaining` and `HashTableAddressing`. Both classes have similar methods in concept but the fundamental differences between them become more prominent upon closer inspection.
+
+Each hash table class contains the following methods:
 
 ```python
 def set_table_with_load_factor(self, lf):
@@ -35,6 +37,12 @@ def print_table(self):
 def get_mem_size(self):
 def is_empty(self):
 ```
+
+The testing process consists of creating an array of hash tables with load factors ranging from 0 to 1 in 0.05 increments and hash table sizes ranging from 100 to 1000000. After creation of all the hash tables, each table was tested for:
+- Time to insert one key
+- Time to search for one key
+- Time to delete one key
+- Overall memory size.
 
 ### Chaining versus Addressing
 
@@ -94,12 +102,15 @@ Once these constants were defined, I used a simple loop to traverse the entire d
 
 ## Configuration
 
-Program execution:
+Execution of the program is performed in one of three ways:
 
 ```shell
-python3 hash_benchmark.py -o
-python3 hash_benchmark.py -c
+python3 hash_benchmark.py -o    # open addressing
+python3 hash_benchmark.py -c    # chaining
+python3 hash_benchmark.py -b    # both open-addressing and chaining
 ```
+
+> **Note:** This project uses the `matplotlib` Python library to create the graphs, I had some issues getting this to execute on the zeus server.
 
 ## Results
 
@@ -108,36 +119,36 @@ python3 hash_benchmark.py -c
 ![insertion-chaining](./imgs/insertion-chaining.png)
 ![insertion-open-addressing](./imgs/insertion-open-addressing.png)
 
-- Open-addressing is faster when the load factor is low, but far slower when the load factor is high.
-- Another note of interest was how erratic the chaining method's graph is compared to the smooth and consistent graph of open-addressing.
+> - Open-addressing is faster when the load factor is low, but far slower when the load factor is high.
+> - Another note of interest was how erratic the chaining method's graph is compared to the smooth and consistent graph of open-addressing.
 
 ### Deletion
 
 ![delete-chaining](./imgs/delete-chaining.png)
 ![delete-open-addressing](./imgs/delete-open-addressing.png)
 
-- Open-addressing is faster when the load factor is low, but far slower when the load factor is high.
+> Open-addressing is faster when the load factor is low, but far slower when the load factor is high.
 
 ### Search
 
 ![search-chaining](./imgs/search-chaining.png)
 ![search-open-addressing](./imgs/search-open-addressing.png)
 
-- Open-addressing is faster when the load factor is low, but far slower when the load factor is high.
+> Open-addressing is faster when the load factor is low, but far slower when the load factor is high.
 
 ### Space
 
 ![memsize-chaining](./imgs/memsize-chaining.png)
 ![memsize-open-addressing](./imgs/memsize-open-addressing.png)
 
-- Chaining uses far more memory than open-addressing, particularly as the size of the table increases and the load factor increases (more insertions).
-- Open addressing has a static memory size based on the size the table itself.
+> - Chaining uses far more memory than open-addressing, particularly as the size of the table increases and the load factor increases (more insertions).
+> - Open addressing has a static memory size based on the size the table itself.
 
 ## Interpretations
 
-After comparison of all of the tests, the data proves the chaining method of the hash table data structure is a faster algorithm for insertion, deletion, particularly as the load factor approaches 1. However, the size overhead accumulated from continuous insertions of a linked list node proves to create a dramatically larger data structure as opposed to the open-addressing method.
+After comparison of all of the tests, the data proves shows a common pattern, open-addressing is a faster algorithm for insertion, searching and deletion when the tables are small; but as the table sizes and load factors increase, the chaining algorithm becomes much faster. However, the size overhead accumulated from continuous insertions of a linked list node proves to create a dramatically larger data structure as opposed to the open-addressing method.
 
-From the data gathered, we can conclude there are situations where one method is more ideal than another when considering which to use. If an application only requires a small table, then the open-addressing method is a better choice, but if the table is large, speed is desired and space is not a factor, then chaining is the preferred method.
+The data gathered proves neither algorithm is explicitly better than the other, and what defines the usefulness of an algorithm (or data-structure) is the situation in which the said algorithm is utilized. When considering chaining and open-addressing, if an application only requires a small table, then the open-addressing method is a better choice, but if the table is large, speed is desired and space is not a factor, then chaining is the preferred method.
 
 ## Licensing & thanks
 

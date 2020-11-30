@@ -1,16 +1,14 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 import random
 import string
 import time
-import sys
 
-OUTPUT = 'output.txt'
+OUTPUT = 'table_data.txt'
 out = open(OUTPUT, 'w')
 
-NUM_TESTS = 1000
+NUM_TESTS = 100
 MAX_TABLE_SIZE = 1000000
 LOAD_FACTORS = []
 TABLE_SIZES = []
@@ -26,6 +24,9 @@ SIZE_ARR_STR = 8            # size of an array index with a 8 character string
 
 
 class GraphData:
+    """
+    class to help with the construction of the matplotlib graphs
+    """
     def __init__(self, lf):
         self.lf = lf
         self.sizes = []
@@ -35,13 +36,18 @@ class GraphData:
 
 
 class ListNode:
+    """
+    linked list node
+    """
     def __init__(self, val):
         self.val = val
         self.next = None
 
 
 class HashTableChaining:
-
+    """
+    hash table data structure using the chaining method of collision resultion
+    """
     def __init__(self, length, lf):
         """
         initialize a hash table
@@ -176,13 +182,20 @@ class HashTableChaining:
         return self.MEM_SIZE
 
     def is_empty(self):
+        """
+        check if table has no values
+        :return: bool
+        """
         for i in self.table:
             if i: return False
         return True
 
 
 class HashTableAddressing:
-
+    """
+    hash table data structure using the open-addressing method of collision resultion
+    using quadratic probing
+    """
     def __init__(self, length, lf):
         """
         initialize a hash table
@@ -301,6 +314,10 @@ class HashTableAddressing:
         return self.MEM_SIZE
 
     def is_empty(self):
+        """
+        check if table has no values
+        :return: bool
+        """
         for i in self.table:
             if i: return False
         return True
@@ -668,6 +685,22 @@ def table_div(): print('{:-^60}'.format(''), file=out)
 def avg(arr): return sum(arr) / len(arr)
 
 
+def gen_random_string():
+    """
+    generate a random string of lowercase letters, 8 characters long
+    :return:
+    """
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(8))
+    return result_str
+
+
+if __name__ == '__main__':
+    main()
+
+
+"""
+The following was used to determine the size of the hash table components
 def size_test():
     ht = HashTableAddressing(100, 0.5)
     print("HashTableAddressing(100, 0.5): ", sys.getsizeof(ht))
@@ -691,17 +724,4 @@ def size_test():
     print("size of empty ListNode: ", sys.getsizeof(l))
     l.val = 'andslajd'
     print("size of ListNode with string: ", sys.getsizeof(l))
-
-
-def gen_random_string():
-    """
-    generate a random string of lowercase letters, 8 characters long
-    :return:
-    """
-    letters = string.ascii_lowercase
-    result_str = ''.join(random.choice(letters) for i in range(8))
-    return result_str
-
-
-if __name__ == '__main__':
-    main()
+"""
